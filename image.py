@@ -1,117 +1,174 @@
-from matplotlib import pyplot
-from matplotlib.image import imread
-from os import listdir
-from numpy import asarray
-from numpy import save
-from keras.preprocessing.image import load_img
-from keras.preprocessing.image import img_to_array
+import numpy as np
+import pandas as pd
 import os
-import sys
-from matplotlib import pyplot
-from keras.utils import to_categorical
-from keras.models import Sequential
-from keras.layers import Conv2D
-from keras.layers import MaxPooling2D
-from keras.layers import Dense
-from keras.layers import Flatten
-from keras.optimizers import SGD
-from keras.preprocessing.image import ImageDataGenerator
-from numpy import load
+import random
 
-
-# define cnn model
-def define_model():
-	model = Sequential()
-	model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(200, 200, 3)))
-	model.add(MaxPooling2D((2, 2)))
-	model.add(Flatten())
-	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
-	model.add(Dense(1, activation='sigmoid'))
-	# compile model
-	opt = SGD(lr=0.001, momentum=0.9)
-	model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
-	return model
-
-
-# plot diagnostic learning curves
-def summarize_diagnostics(history):
-	# plot loss
-	pyplot.subplot(211)
-	pyplot.title('Cross Entropy Loss')
-	pyplot.plot(history.history['loss'], color='blue', label='train')
-	pyplot.plot(history.history['val_loss'], color='orange', label='test')
-	# plot accuracy
-	pyplot.subplot(212)
-	pyplot.title('Classification Accuracy')
-	pyplot.plot(history.history['accuracy'], color='blue', label='train')
-	pyplot.plot(history.history['val_accuracy'], color='orange', label='test')
-	# save plot to file
-	filename = sys.argv[0].split('/')[-1]
-	pyplot.savefig(filename + '_plot.png')
-	pyplot.close()
-
-
-# run the test harness for evaluating a model
-def run_test_harness():
-	# define model
-	model = define_model()
-	# create data generator
-	datagen = ImageDataGenerator(rescale=1.0/255.0)
-	# prepare iterators
-	train_it = datagen.flow_from_directory('train/',
-		class_mode='binary', batch_size=1, target_size=(200, 200))
-	test_it = datagen.flow_from_directory('test/',
-		class_mode='binary', batch_size=1, target_size=(200, 200))
-	# fit model
-	history = model.fit_generator(train_it, steps_per_epoch=len(train_it),
-		validation_data=test_it, validation_steps=len(test_it), epochs=20, verbose=0)
-	# evaluate model
-	_, acc = model.evaluate_generator(test_it, steps=len(test_it), verbose=0)
-	print('> %.3f' % (acc * 100.0))
-	# learning curves
-	summarize_diagnostics(history)
-
-# entry point, run the test harness
-run_test_harness()
+from keras_preprocessing.image import ImageDataGenerator, img_to_array
+from tensorflow.keras.preprocessing.image import load_img
+from sklearn.model_selection import train_test_split
+import tensorflow.keras.preprocessing.image as image
+from tensorflow.keras import layers
+from tensorflow.keras import models
+import  tensorflow.keras.optimizers as optimizers
+model = models.Sequential()
 
 if __name__ == '__main__':
-    # define location of dataset
-    '''folder_good = 'train/good/'
-    folder_bad = 'train/bad/'
-    arr = os.listdir('C:\\Users\\palas\\PycharmProjects\\pythonProject2\\train\\good')
-    photos, labels = list(), list()
-    # enumerate files in the directory
-    for file in listdir(folder_good):
-        # determine class
-        output = 0.0
-        # load image
-        photo = load_img(folder_good + file, target_size=(200, 200))
-        # convert to numpy array
-        photo = img_to_array(photo)
-        # store
-        photos.append(photo)
-        labels.append(output)
+	#Definde folder path
+	folder_good = 'train/good/'
+	folder_bad = 'train/bad'
 
-    for file in listdir(folder_bad):
-        # determine class
-        output = 0.0
-        # load image
-        photo = load_img(folder_bad + file, target_size=(200, 200))
-        # convert to numpy array
-        photo = img_to_array(photo)
-        # store
-        photos.append(photo)
-        labels.append(output)
+	#This folder contains all images
+    folder_main ='train_final'
 
-    # convert to a numpy arrays
-    photos = asarray(photos)
-    labels = asarray(labels)
-    print(photos.shape, labels.shape)
-    # save the reshaped photos
-    save('goods_vs_bad_photos.npy', photos)
-    save('goods_vs_bad_labels.npy', labels)'''
+	#DataAugmentation
+	datagen = ImageDataGenerator(
+    	rotation_range=30,
+    	horizontal_flip=True,
+    	width_shift_range=0.1,
+    	height_shift_range=0.1,
+		fill_mode='nearest'
+	)
 
-    photos = load('goods_vs_bad_photos.npy')
-    labels = load('goods_vs_bad_labels.npy')
-    print(photos.shape, labels.shape)
+	filenames_good = os.listdir(folder_good)
+	for filename in filenames_good:
+		img= load_img(folder_good + filename)
+		img_array = img_to_array(img)
+		img_array = img_array.reshape((1,)+img_array.shape)
+		i=0
+
+		for batch in datagen.flow(img_array,batch_size=1,save_to_dir=folder_main,save_prefix='good.',save_format='tif'):
+			i=i+1
+			if i < 10:
+				break
+
+	filenames_bad = os.listdir(folder_bad)
+	for filename in filenames_good:
+		img= load_img(folder_bad + filename)
+		img_array = img_to_array(img)
+		img_array = img_array.reshape((1,)+img_array.shape)
+		i=0
+
+		for batch in datagen.flow(img_array,batch_size=1,save_to_dir=folder_main,save_prefix='bad.',save_format='tif'):
+			i=i+1
+			if i < 30:
+				break
+
+	# gather images into a dataframe
+	filenames_main = os.listdir(folder_main)
+	categories = []
+	for filename in filenames_main:
+		category = filename.split('.')[0]
+		if category == 'good':
+			categories.append('good')
+		else:
+			categories.append('bad')
+
+
+	all_df = pd.DataFrame({
+		'filename': filenames_main,
+		'category': categories
+	})
+
+
+	# split into train/validate and test sets
+	train_validate, test_df = train_test_split(all_df, test_size=0.20, random_state=0)
+	train_validate = train_validate.reset_index(drop=True)
+	test_df = test_df.reset_index(drop=True)
+
+	# split train/validate into train and validation sets
+	train_df, validate_df = train_test_split(train_validate, test_size=0.20, random_state=0)
+	train_df = train_df.reset_index(drop=True)
+	validate_df = validate_df.reset_index(drop=True)
+
+
+	train_datagen = image.ImageDataGenerator(rescale=1./255)
+	validate_datagen = image.ImageDataGenerator(rescale=1./255)
+	test_datagen = image.ImageDataGenerator(rescale=1./255)
+
+
+	## using ImageDataGenerator to read train_df images from directories
+	train_generator = train_datagen.flow_from_dataframe(
+    	train_df,
+    	folder_main,
+    	x_col='filename',
+    	y_col='category',
+    	target_size=(128, 128),
+    	class_mode='binary',
+    	batch_size=5
+	)
+
+
+	## using ImageDataGenerator to read validate_df images from directories
+	validation_generator = validate_datagen.flow_from_dataframe(
+    	validate_df,
+		folder_main,
+   		x_col='filename',
+    	y_col='category',
+    	target_size=(128, 128),
+    	class_mode='binary',
+    	batch_size=2
+	)
+
+	## using ImageDataGenerator to read test_df images from directories
+	test_generator = test_datagen.flow_from_dataframe(
+    	test_df,
+    	folder_main,
+    	x_col='filename',
+    	y_col='category',
+    	target_size=(128,128),
+    	class_mode='binary',
+    	batch_size=50
+	)
+
+
+
+	# convolutional-base
+	model.add(layers.Conv2D(32, (3, 3), activation='relu',
+	input_shape=(128, 128, 3)))
+	model.add(layers.MaxPooling2D((2, 2)))
+	model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+	model.add(layers.MaxPooling2D((2, 2)))
+	model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+	model.add(layers.MaxPooling2D((2, 2)))
+	model.add(layers.Conv2D(256, (3, 3), activation='relu'))
+	model.add(layers.MaxPooling2D((2, 2)))
+	model.add(layers.Flatten())
+
+	# densely connected classifier
+	model.add(layers.Dense(256, activation='relu'))
+	model.add(layers.Dense(1, activation='sigmoid'))
+	model.summary()
+
+
+	# optimizing model performance
+	from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+	callbacks = [
+    	EarlyStopping(patience=10, verbose=1),
+    	ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
+	]
+
+
+	# configuring the model for training
+
+	model.compile(loss='binary_crossentropy',
+	optimizer=optimizers.RMSprop(lr=1e-4),
+	metrics=['acc'])
+
+
+	# fitting the model using a batch generator
+	history = model.fit_generator(
+        train_generator,
+        steps_per_epoch=100,
+        epochs=30,
+        validation_data=validation_generator,
+        validation_steps=100,
+        callbacks=callbacks,)
+
+
+	#Calculating Accuracy
+	test_loss, test_acc = model.evaluate_generator(test_generator, steps=100)
+	print('test acc:', test_acc)
+
+
+
 
