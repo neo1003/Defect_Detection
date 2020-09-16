@@ -1,0 +1,15 @@
+                                                                  Design Documetns
+                                                                  
+                                                                     Approach 1
+
+1) First we removed background noise from the images using filters
+2) Creating labels for the images into binary classification as good and bad
+3) Reshapping the images into standard images (255 x 255)
+4) Saving the images into np array
+5) Creating new images by transforming earlier images as dataset have low number of images
+6) Ratio between good and bad is imbalance (7:1) so recreate images more by transforming bad images to make it balance
+7) Create a CNN model
+8) Use dropout for regularization
+9) Fit model
+10) Predict model on the train image dataset
+
