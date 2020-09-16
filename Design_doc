@@ -2,14 +2,15 @@
                                                                   
                                                                      Approach 1
 
-1) First we removed background noise from the images using filters
-2) Creating labels for the images into binary classification as good and bad
-3) Reshapping the images into standard images (255 x 255)
-4) Saving the images into np array
-5) Creating new images by transforming earlier images as dataset have low number of images
-6) Ratio between good and bad is imbalance (7:1) so recreate images more by transforming bad images to make it balance
-7) Create a CNN model
-8) Use dropout for regularization
-9) Fit model
-10) Predict model on the train image dataset
+These are the following steps which are taken to complete the exercise :-
+
+1) First we check the count of the total number of images which is very few, so we need to regenrate the images using DataAugmentation
+2) By using ImageDataGenerator we recreated the images by transforming the images and saving into the directory
+3) As ratio between good and bad images were about(3:1) so we try to balance the imbalance data by recreating 30 images for bad image and 10 image for good image
+4) Then we converted the images dataset into dataframe and label the images as good and bad
+5) We divide the dataset into three parts as training, validation and testing
+6) Then we reshape the images into a standard size of 128 x 128 
+7) We created a CNN model contiaining 3 hidden layer along with max pooling layer
+8) Then we use the callback and early_Stopping to regularize the model so that model doen not overfit
+9) Then we fit and predicted the upcoming images
 
